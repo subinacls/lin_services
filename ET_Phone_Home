@@ -1,0 +1,60 @@
+# Systemd Phonehone Services
+# Useful systemd services used to make deployable machines phone home for ease of access
+# These will require modification and installation of additional binary packages
+# apt-get install autossh
+ 
+----------[CUT]-----------
+[Unit]
+Description=Phone Home Keepalive Reverse SSH Service
+ConditionPathExists=|/usr/bin
+After=network.target
+
+[Service]
+User=<user>
+ExecStart=/usr/bin/autossh -M 0 -N -q -o "ServerAliveInterval 60" -o "ServerAliveCountMax 3" -p <port> <user>@<ipaddress> -R <port>:localhost:<port> -i /<user>/.ssh/id_rsa
+
+[Install]
+WantedBy=multi-user.target
+----------[CUT]-----------
+[Unit]
+Description=Phone Home SOCKS5 Keepalive Reverse SSH Service
+After=network.target
+
+[Service]
+User=<user>
+ExecStart=/usr/bin/autossh -M 0 -N -q -o ServerAliveInterval=60 -o ExitOnForwardFailure=yes -o StrictHostKeychecking=no -o ServerAliveCountMax=3 -i /<user>/.ssh/id_rsa -D <port> <user>@<ipaddress> -p <port> && /usr/bin/autossh -M 0 -N -q -o ServerAliveInterval=60 -o ExitOnForwardFailure=yes -o StrictHostKeychecking=no -o ServerAliveCountMax=3 -i /<user>/.ssh/id_rsa -R <port>:localhost:<port> <user>@<ipaddress> -p <port>
+
+[Install]
+WantedBy=multi-user.target
+----------[CUT]-----------
+[Unit]
+Description=Phone Home SSH Filesystem Service
+ConditionPathExists=|/usr/bin
+After=network.target
+
+[Service]
+User=<user>
+# must have the directory already made for the mount
+ExecStart=/usr/bin/autossh -M 0 -N -q -o ServerAliveInterval=60 -o ExitOnForwardFailure=yes -o StrictHostKeychecking=no -o ServerAliveCountMax=3 -i /<user>/.ssh/id_rsa sshfs <user>@<ipaddress>:/share/folder /mount/location
+# Restart every >2 seconds to avoid StartLimitInterval failure
+RestartSec=3
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+----------[CUT]-----------
+[Unit]
+Description=Phone Home OpenVPN Service
+ConditionPathExists=|/usr/sbin
+After=network.target
+
+[Service]
+User=<user>
+# must already have autologin, inline config on filesystem
+ExecStart=/usr/sbin/openvpn --config /<user>/<vpnconfigfile>
+# Restart every >2 seconds to avoid StartLimitInterval failure
+RestartSec=3
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
